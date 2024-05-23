@@ -1,6 +1,5 @@
-from odoo import fields, models
+from odoo import fields, models, api
 from odoo.exceptions import ValidationError
-
 
 class Book(models.Model):
     
@@ -13,6 +12,9 @@ class Book(models.Model):
     image = fields.Binary("Cover")
     publisher_id = fields.Many2one("res.partner",string="Publisher")
     author_ids = fields.Many2many("res.partner",string="Authors")
+    category_ids = fields.Many2many("library.category",string="Categories")
+    reference_no = fields.Char(string='Book Reference', required=True,
+                          readonly=True, default=lambda self: ('New'))
     
     
     def _check_isbn(self):
@@ -33,3 +35,12 @@ class Book(models.Model):
             if book.isbn and not book._check_isbn():
                 raise ValidationError("%s ISBN is invalid" % book.isbn)
             return True
+        
+        
+    @api.model
+    def create(self, vals):
+        if vals.get('reference_no', ('New')) == ('New'):
+            vals['reference_no'] = self.env['ir.sequence'].next_by_code(
+                'library.book') or ('New')
+        res = super(Book, self).create(vals)
+        return res
